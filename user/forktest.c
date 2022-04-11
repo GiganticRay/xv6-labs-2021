@@ -25,7 +25,7 @@ forktest(void)
     if(pid < 0)
       break;
     if(pid == 0)
-      exit(0);
+      exit(0);  // there are n sub process are created.
   }
 
   if(n == N){
@@ -40,6 +40,7 @@ forktest(void)
     }
   }
 
+  // this section would never run
   if(wait(0) != -1){
     print("wait got too many\n");
     exit(1);

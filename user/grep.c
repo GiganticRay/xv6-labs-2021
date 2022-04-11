@@ -1,4 +1,4 @@
-// Simple grep.  Only supports ^ . * $ operators.
+// Simple grep(global regular expression print).  Only supports ^ . * $ operators.
 
 #include "kernel/types.h"
 #include "kernel/stat.h"

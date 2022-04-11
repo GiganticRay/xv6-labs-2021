@@ -45,3 +45,11 @@ You will need a RISC-V "newlib" tool chain from
 https://github.com/riscv/riscv-gnu-toolchain, and qemu compiled for
 riscv64-softmmu. Once they are installed, and in your shell
 search path, you can run "make qemu".
+
+# Experienment
+
+## ex1: sleep
+1. command line parameter, **argc** is argument count. By default **argc** is 1 and *argv[0]** is filename.
+2. using fprintf instead of printf to put output into specified output stream.
+3. exit(1) insetead of exit(-1) since exit(1) indicate abnormal termination of the program.
+4. self-implemented file is located in `/user/`, system call is implemented in `/user/usys.S` using **assembly language**. user call is implemented in `/user/*.c`. `/user/user.h` provide the interface of both of them.
