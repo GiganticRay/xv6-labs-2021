@@ -53,3 +53,13 @@ search path, you can run "make qemu".
 2. using fprintf instead of printf to put output into specified output stream.
 3. exit(1) insetead of exit(-1) since exit(1) indicate abnormal termination of the program.
 4. self-implemented file is located in `/user/`, system call is implemented in `/user/usys.S` using **assembly language**. user call is implemented in `/user/*.c`. `/user/user.h` provide the interface of both of them.
+
+
+## ex2: pingpong
+### prerequisite
+1. pipe() to initilize a pipe.
+### STEPS
+1. 仅用 1 个 pipe，主进程先往 `pipe[1]`(写端)写入 1 字节
+2. `fork` 后，子进程判断 `read from pipe[0]` 是否成功，如果成功的话，管道中的值已经被读出了，为空（这里主进程**保证**仅向管道内写入 `1` 个字节的数据, 子进程再向 `pipe[1]` 内写入一个字节
+3. 主进程 `wait for the end of sub process`. 如果成功，则说明子进程成功写入 `1` 字节元素进入管道，主进程读取该字节（同上需要子进程做出承诺).
+

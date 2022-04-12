@@ -48,14 +48,14 @@ search path, you can run "make qemu".
 
 # Experienment
 
-## ex1: sleep
+## ex1.1: sleep
 1. command line parameter, **argc** is argument count. By default **argc** is 1 and *argv[0]** is filename.
 2. using fprintf instead of printf to put output into specified output stream.
 3. exit(1) insetead of exit(-1) since exit(1) indicate abnormal termination of the program.
 4. self-implemented file is located in `/user/`, system call is implemented in `/user/usys.S` using **assembly language**. user call is implemented in `/user/*.c`. `/user/user.h` provide the interface of both of them.
 
 
-## ex2: pingpong
+## ex1.2: pingpong
 ### prerequisite
 1. pipe() to initilize a pipe.
 ### STEPS
@@ -63,3 +63,28 @@ search path, you can run "make qemu".
 2. `fork` 后，子进程判断 `read from pipe[0]` 是否成功，如果成功的话，管道中的值已经被读出了，为空（这里主进程**保证**仅向管道内写入 `1` 个字节的数据, 子进程再向 `pipe[1]` 内写入一个字节
 3. 主进程 `wait for the end of sub process`. 如果成功，则说明子进程成功写入 `1` 字节元素进入管道，主进程读取该字节（同上需要子进程做出承诺).
 
+
+## ex1.3: primes 
+### data flow
+> $main[2,35] \Rightarrow p[0] \rightarrow p[1] \Rightarrow subP1[3,5,7,\cdots, 35] \Rightarrow p1[0] \rightarrow p1[1] \Rightarrow subP2[5,7,11,\cdots,35]\cdots$ 
+
+### Thought
+1. 可不要小瞧了递归的重要性，虽然 leetcode 的树遍历都是要求将递归展开，不过这种天然递归的时候，用递归更容易理清代码逻辑
+```c++
+	subprimes(pare_pipe){
+		pipe(sub_pipe)
+		if(get an int(base) from pipe[READEND]){
+			fork a subprocess to provoke subprimes(sub_pipe) recursively.
+			transfer i which i%base != 0 into sub_pipe.
+
+		}
+	}
+```
+2. doubting about hint of homework description.
+> Hint: read `returns zero` when the `write-side` of a pipe is `closed`.
+
+> Q: `pipe` 的 `write-side` 一关闭，return 就立马返回 0 吗？
+
+> Q: `pipe` 是在 `fork()` 之前建立的，那么 子进程保留的是 pipe 的拷贝(虽然同一个 `fd` 共享 `offset`)。那么父进程里面的 `写端` 关闭了，对子进程的 `读` 有什么影响呢？
+
+> A: 不是的，关闭 `pipe` 的一端，相当于给这个 `pipe` 加上了一个文件末尾标识符, 就算是拷贝的，但是最终指向的，还是同一个 `pipe`，所以子进程在 读取 `pipe` 的时候，最终会返回 `0`，表示读取到 `pipe` 的末尾了。

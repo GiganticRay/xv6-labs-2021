@@ -1,3 +1,8 @@
+// Copyright: 	LeiChao 
+// Author: 		Leichao
+// Github:		https://github.com/GiganticRay
+// Date:		2022/04/11
+
 // copy.c: copy input to output
 // adding function into xv6: https://www.geeksforgeeks.org/xv6-operating-system-add-a-user-program/
 
