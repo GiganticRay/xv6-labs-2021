@@ -88,3 +88,30 @@ search path, you can run "make qemu".
 > Q: `pipe` 是在 `fork()` 之前建立的，那么 子进程保留的是 pipe 的拷贝(虽然同一个 `fd` 共享 `offset`)。那么父进程里面的 `写端` 关闭了，对子进程的 `读` 有什么影响呢？
 
 > A: 不是的，关闭 `pipe` 的一端，相当于给这个 `pipe` 加上了一个文件末尾标识符, 就算是拷贝的，但是最终指向的，还是同一个 `pipe`，所以子进程在 读取 `pipe` 的时候，最终会返回 `0`，表示读取到 `pipe` 的末尾了。
+
+## ex1.4 find--file system.
+1. **ulib.c** 中的 `memmove`的实现很 tricky. 针对 `src >? dst` 与否，来决定是从前往后还是从后往前进行拷贝，避免**覆盖问题**.
+2. **directory entry**: a **data struct** defiend in `/kernel/fs.h'. most of the metadata about the file is stored within the `inode`, not the directory entry which is just a struct of inode and filename. we can safely imagine a directory entry as a `dictionary`.
+3. the first sizeof(directory entry) of a file stores this files directory entry (a struct stores its inode and file name): `ls.c line 57` 
+4. `ls.c` line `58`: could `inode` be `0` for a file?
+>A: 0 is used as a sentinel value to indicate null or no inode. similar to how pointers can be NULL in C. without a sentinel, you'd need an extra bit to test if an inode in a struct was set or not. FROM [STACKOVERFLOW][1]
+5. directory is also a **file**, so what excatly stores in it?
+> [directories constains just name and i-node.][2], Directory entries are 10 bytes long. The first word is the i—node of the file represented by the entry, if non—zero; if zero, the entry is empty.
+6. pseudo code
+```c++
+pseudo code find(path, name)
+	get stat of path
+	use buf to concatenate path/
+	while(read each elem(stored in de, since we need name) in path directory file):
+		use buf to concatenate path/elem.name
+		get stat of buf
+		switch(buf.stat.type)
+			case: file
+				compare
+			case: dir
+				find(buf, name)
+```
+
+
+[1]:https://stackoverflow.com/questions/2099121/why-do-inode-numbers-start-from-1-and-not-0
+[2]:https://askubuntu.com/questions/1073802/what-are-directories-if-everything-on-linux-is-a-file

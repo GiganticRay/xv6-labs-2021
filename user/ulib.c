@@ -71,7 +71,7 @@ gets(char *buf, int max)
 }
 
 int
-stat(const char *n, struct stat *st)
+stat(const char *n, struct stat *st)  // place info about a named file into *st.
 {
   int fd;
   int r;
@@ -103,8 +103,8 @@ memmove(void *vdst, const void *vsrc, int n)
 
   dst = vdst;
   src = vsrc;
-  if (src > dst) {
-    while(n-- > 0)
+  if (src > dst) {  // any differencies between these two branches?
+    while(n-- > 0)  // yep! a trick to deal with overwrite problem.
       *dst++ = *src++;
   } else {
     dst += n;

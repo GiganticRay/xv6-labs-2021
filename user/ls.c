@@ -17,7 +17,7 @@ fmtname(char *path)
   // Return blank-padded name.
   if(strlen(p) >= DIRSIZ)
     return p;
-  memmove(buf, p, strlen(p));
+  memmove(buf, p, strlen(p));   // (destination, source, length)
   memset(buf+strlen(p), ' ', DIRSIZ-strlen(p));
   return buf;
 }
@@ -27,15 +27,15 @@ ls(char *path)
 {
   char buf[512], *p;
   int fd;
-  struct dirent de;
-  struct stat st;
+  struct dirent de; // directory entry
+  struct stat st;   // file status info
 
-  if((fd = open(path, 0)) < 0){
+  if((fd = open(path, 0)) < 0){ // flag is defiend in /kernel/fcntl.h, fd is already opened.
     fprintf(2, "ls: cannot open %s\n", path);
     return;
   }
 
-  if(fstat(fd, &st) < 0){
+  if(fstat(fd, &st) < 0){ // place info about an open file into *st.
     fprintf(2, "ls: cannot stat %s\n", path);
     close(fd);
     return;
@@ -47,7 +47,7 @@ ls(char *path)
     break;
 
   case T_DIR:
-    if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf){
+    if(strlen(path) + 1 + DIRSIZ + 1 > sizeof buf){ // 2 more bites to store '\0' and '\'
       printf("ls: path too long\n");
       break;
     }
@@ -55,7 +55,7 @@ ls(char *path)
     p = buf+strlen(buf);
     *p++ = '/';
     while(read(fd, &de, sizeof(de)) == sizeof(de)){
-      if(de.inum == 0)
+      if(de.inum == 0)  // why check 0: check README.md of branch util.
         continue;
       memmove(p, de.name, DIRSIZ);
       p[DIRSIZ] = 0;
