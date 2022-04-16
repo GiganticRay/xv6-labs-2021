@@ -112,6 +112,12 @@ pseudo code find(path, name)
 				find(buf, name)
 ```
 
+## ex1.5 xargs
+1. tips: arguments are seperated by `\n`.
+2. put basic arguments of the pending exec into the `c_argv` firstly.
+3. read char from standard input and stream them synchronously.
+4. fork and exec the pending exec when meeting `\n`.
+
 
 [1]:https://stackoverflow.com/questions/2099121/why-do-inode-numbers-start-from-1-and-not-0
 [2]:https://askubuntu.com/questions/1073802/what-are-directories-if-everything-on-linux-is-a-file
