@@ -7,7 +7,7 @@
 void main();
 void timerinit();
 
-// entry.S needs one stack per CPU.
+// entry.S needs one stack per CPU provided by entry.S
 __attribute__ ((aligned (16))) char stack0[4096 * NCPU];
 
 // a scratch area per CPU for machine-mode timer interrupts.
@@ -20,17 +20,17 @@ extern void timervec();
 void
 start()
 {
-  // set M Previous Privilege mode to Supervisor, for mret.
+  // set M Previous Privilege mode to Supervisor, for mret. mstatus is the register which store the mode bit.
   unsigned long x = r_mstatus();
   x &= ~MSTATUS_MPP_MASK;
   x |= MSTATUS_MPP_S;
   w_mstatus(x);
 
   // set M Exception Program Counter to main, for mret.
-  // requires gcc -mcmodel=medany
+  // requires gcc -mcmodel=medany, mepc is the register which stores the the return address, here is the address of main.
   w_mepc((uint64)main);
 
-  // disable paging for now.
+  // disable paging for now. satp is page table register.
   w_satp(0);
 
   // delegate all interrupts and exceptions to supervisor mode.

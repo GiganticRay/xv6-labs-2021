@@ -100,6 +100,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
 // Look up a virtual address, return the physical address,
 // or 0 if not mapped.
 // Can only be used to look up user pages.
+// check the user-supplied virtual address is part of the process's user address space.
 uint64
 walkaddr(pagetable_t pagetable, uint64 va)
 {
@@ -402,7 +403,7 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 
   while(got_null == 0 && max > 0){
     va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
+    pa0 = walkaddr(pagetable, va0); // physical address of va srcva
     if(pa0 == 0)
       return -1;
     n = PGSIZE - (srcva - va0);

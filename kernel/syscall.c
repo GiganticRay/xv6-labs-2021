@@ -25,12 +25,14 @@ int
 fetchstr(uint64 addr, char *buf, int max)
 {
   struct proc *p = myproc();
+  // the first parameter pagetable is not the current page-table
   int err = copyinstr(p->pagetable, buf, addr, max);
   if(err < 0)
     return err;
   return strlen(buf);
 }
 
+// kernel functions call this function to retrieve the appropriate saved user register.
 static uint64
 argraw(int n)
 {
@@ -104,6 +106,8 @@ extern uint64 sys_unlink(void);
 extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
+// self-defined function declaration.
+extern uint64 sys_trace(void);
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -127,17 +131,28 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+// self-defined function pointer.
+[SYS_trace]   sys_trace,
 };
 
 void
 syscall(void)
 {
   int num;
-  struct proc *p = myproc();
+  struct proc *p = myproc();  // 系统调用这里获取到的 myproc 仍是用户区域的那个进程
 
-  num = p->trapframe->a7;
+  num = p->trapframe->a7; // a7 is the register of exec number which is set int initcode.S
+
+  char* syscall_name_list[22] = {"fork", "exit", "wait", "pipe", "read", "kill", "exec", "fstat", "chdir", "dup", "getpid", "sbrk", "sleep", "uptime", "open", "write", "mknod", "unlink", "link", "mkdir", "close", "trace"};
+  
+  // when exec returns, a0 record its return value.
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();
+
+    // trace it if this system call num was mask in mask_num
+    if((1 << num) & (p->mask_num)){
+      printf("%d: syscall %s -> %d\n", p->pid, syscall_name_list[num-1], p->trapframe->a0);
+    }
   } else {
     printf("%d %s: unknown sys call %d\n",
             p->pid, p->name, num);

@@ -95,3 +95,16 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+// trace the system call from the user space.
+uint64
+sys_trace(void){
+  int mask_num;
+
+  // argint fetch the 0 parameter given by system call called in userspace. (trace.c line 24)
+  if(argint(0, &mask_num) < 0)
+    return -1;
+
+  myproc()->mask_num = mask_num;
+  return 0;
+}

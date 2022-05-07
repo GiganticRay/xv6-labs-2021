@@ -1,3 +1,4 @@
+// The source is divided into files, following a rough notion of modularity. The inter-module interfaces are defined here.
 struct buf;
 struct context;
 struct file;
