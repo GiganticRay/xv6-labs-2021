@@ -67,3 +67,9 @@ search path, you can run "make qemu".
 5. `call` 直接与寄存器进行交互，实现目的.
 6. `sys_call` 的返回值，在 `syscall.c` 中，写入 `a0` 寄存器。
 7. 如何返回用户态？这一点暂时还没看到
+
+## ex2.2 sysinfo
+### file description
+1. `defs.h`: xv6 有很多相似的系统调用函数，xv6 将这些函数归类放到了文件里面，如 `proc.c`, `kalloc.c`.为了方便，将所有的`函数声明`放到一个一个文件里面，这个文件就是 `defs.h`
+2. `proc.c`: 与进程相关的一些函数，这个实现好像是类似线程池这种，全部进程都存在于一个数组里面，用的时候改变状态
+3. `kalloc.c`: 第三章里面会详细讲。此处（不保证对）：kmem 是内存管理的对象，其包含 freelist 的指针，每个代表一张空白页

@@ -1,6 +1,9 @@
 struct stat;
 struct rtcdate;
 
+// self-defiend struct
+struct sysinfo;
+
 // system calls
 int fork(void);
 int exit(int) __attribute__((noreturn));
@@ -26,6 +29,7 @@ int uptime(void);
 
 // self-implemented system call
 int trace(int);
+int sysinfo(struct sysinfo *); 
 
 // ulib.c
 int stat(const char*, struct stat*);

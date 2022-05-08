@@ -39,3 +39,4 @@ entry("uptime");
 
 # self-defined stub
 entry("trace");
+entry("sysinfo");

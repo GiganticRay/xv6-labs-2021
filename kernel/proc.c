@@ -657,3 +657,16 @@ procdump(void)
     printf("\n");
   }
 }
+
+// return the number of active process whose state is not UNUSED
+int
+get_active_proc(void){
+  int active_num = 0;
+  int i;
+  for(i = 0; i < NPROC; i++){
+    if(proc[i].state != UNUSED)
+      active_num++;
+  }
+
+  return active_num;
+}

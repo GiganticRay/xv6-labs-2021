@@ -6,6 +6,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -106,5 +107,23 @@ sys_trace(void){
     return -1;
 
   myproc()->mask_num = mask_num;
+  return 0;
+}
+
+uint64
+sys_sysinfo(void){
+  // 接受一个参数，a pointer to a struct sysinfo
+  uint64 sysinfo_p;
+  if(argaddr(0, & sysinfo_p) < 0)
+    return -1;
+  struct sysinfo sysinfo_in_kernel;
+
+  // 获取到 system 的 freemem 与 nproc 后，将对象写回到传入的地址里面
+  sysinfo_in_kernel.freemem = get_freemem();
+  sysinfo_in_kernel.nproc = get_active_proc();
+
+  struct proc *p = myproc();
+  if(copyout(p->pagetable, sysinfo_p, (char*)&sysinfo_in_kernel, sizeof(sysinfo_in_kernel)) < 0)
+    return -1;
   return 0;
 }
