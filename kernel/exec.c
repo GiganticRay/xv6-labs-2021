@@ -10,7 +10,7 @@
 static int loadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uint sz);
 
 int
-exec(char *path, char **argv)
+exec(char *path, char **argv) // opens the named binary path using namei. Then reads the ELF header.
 {
   char *s, *last;
   int i, off;
@@ -29,13 +29,13 @@ exec(char *path, char **argv)
   }
   ilock(ip);
 
-  // Check ELF header
+  // Check ELF header, an ELF binary starts with the four-byte "majic number" 0x7F, 'E', 'L', 'F', or ELF_MAGIC, 检查头文件中是否有 ELF_MAGIC 来判定这个文件是否是一个 ELF 格式定义的二进制文件
   if(readi(ip, 0, (uint64)&elf, 0, sizeof(elf)) != sizeof(elf))
     goto bad;
   if(elf.magic != ELF_MAGIC)
     goto bad;
 
-  if((pagetable = proc_pagetable(p)) == 0)
+  if((pagetable = proc_pagetable(p)) == 0)  // allocate a new page table with no user mappings
     goto bad;
 
   // Load program into memory.

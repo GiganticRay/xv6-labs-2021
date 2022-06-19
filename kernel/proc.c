@@ -248,7 +248,7 @@ userinit(void)
 }
 
 // Grow or shrink user memory by n bytes.
-// Return 0 on success, -1 on failure.
+// Return 0 on success, -1 on failure. another name(sbrk), n could be either positive or negative.
 int
 growproc(int n)
 {

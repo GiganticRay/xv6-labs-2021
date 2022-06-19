@@ -7,7 +7,8 @@
 #include "fs.h"
 
 /*
- * the kernel's page table.
+ * the kernel's page table. a pointer to a RISC-V root page-table page.
+ * this maybe either the kernel page table, or one of the per-process page tables.
  */
 pagetable_t kernel_pagetable;
 
@@ -15,16 +16,17 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 
 extern char trampoline[]; // trampoline.S
 
-// Make a direct-map page table for the kernel.
+// Make a direct-map page table for the kernel. this call occurs before xv6 has enabled paging on the risc-v
+// so addresses refer directly ro physical memory.
 pagetable_t
 kvmmake(void)
 {
   pagetable_t kpgtbl;
 
-  kpgtbl = (pagetable_t) kalloc();
+  kpgtbl = (pagetable_t) kalloc();  // which is allocated as a page of physical memory to hold the root page-table page.
   memset(kpgtbl, 0, PGSIZE);
 
-  // uart registers
+  // uart registers, install the translations that the kernel needs
   kvmmap(kpgtbl, UART0, UART0, PGSIZE, PTE_R | PTE_W);
 
   // virtio mmio disk interface
@@ -43,19 +45,20 @@ kvmmake(void)
   // the highest virtual address in the kernel.
   kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 
-  // map kernel stacks
+  // map kernel stacks, allocates a kernel stack for each process.
   proc_mapstacks(kpgtbl);
   
   return kpgtbl;
 }
 
-// Initialize the one kernel_pagetable
+// Initialize the one kernel_pagetable as illustrated in Figure 3.3
 void
 kvminit(void)
 {
   kernel_pagetable = kvmmake();
 }
 
+// notes: install the kernel page table. (not create!)
 // Switch h/w page table register to the kernel's page table,
 // and enable paging.
 void
@@ -65,6 +68,7 @@ kvminithart()
   sfence_vma();
 }
 
+// notes: finds the PTE for a virtual address
 // Return the address of the PTE in page table pagetable
 // that corresponds to virtual address va.  If alloc!=0,
 // create any required page-table pages.
@@ -72,11 +76,14 @@ kvminithart()
 // The risc-v Sv39 scheme has three levels of page-table
 // pages. A page-table page contains 512 64-bit PTEs.
 // A 64-bit virtual address is split into five fields:
-//   39..63 -- must be zero.
-//   30..38 -- 9 bits of level-2 index.
-//   21..29 -- 9 bits of level-1 index.
-//   12..20 -- 9 bits of level-0 index.
-//    0..11 -- 12 bits of byte offset within the page.
+//   39..63 -- must be zero. (EXT)
+//   30..38 -- 9 bits of level-2 index. (L2)
+//   21..29 -- 9 bits of level-1 index. (L1)
+//   12..20 -- 9 bits of level-0 index. (L0)
+//    0..11 -- 12 bits of byte offset within the page. (Offset)
+// attention: This function depends on PM being direct-mapped into the kernel VA space.
+// walk pulls the PA of the next-level-down page table from A PTE, (line 96)
+// then uses it as a virtual address to fetch the PTE at he next level down. (line 93)
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
@@ -84,13 +91,15 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
     panic("walk");
 
   for(int level = 2; level > 0; level--) {
-    pte_t *pte = &pagetable[PX(level, va)];
+    pte_t *pte = &pagetable[PX(level, va)]; // PA pagetable is used as virtual address.
+    // use & op to get the 'Valid' bit of the current pagetable entry.
     if(*pte & PTE_V) {
       pagetable = (pagetable_t)PTE2PA(*pte);
-    } else {
+    } 
+    else {
       if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
         return 0;
-      memset(pagetable, 0, PGSIZE);
+      memset(pagetable, 0, PGSIZE); // the pagetable got from kalloc is physical address.
       *pte = PA2PTE(pagetable) | PTE_V;
     }
   }
@@ -130,6 +139,7 @@ kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
     panic("kvmmap");
 }
 
+// notes: installs PTEs for new mappings.
 // Create PTEs for virtual addresses starting at va that refer to
 // physical addresses starting at pa. va and size might not
 // be page-aligned. Returns 0 on success, -1 if walk() couldn't
@@ -146,13 +156,16 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   a = PGROUNDDOWN(va);
   last = PGROUNDDOWN(va + size - 1);
   for(;;){
+    // mem is exhausted, otherwise 我们获取到了一个 va 归位的 pte 指针
     if((pte = walk(pagetable, a, 1)) == 0)
       return -1;
     if(*pte & PTE_V)
       panic("mappages: remap");
+    // 将 flag 位，pa，并入 pte.
     *pte = PA2PTE(pa) | perm | PTE_V;
     if(a == last)
       break;
+    // PTE 是以页为单位的
     a += PGSIZE;
     pa += PGSIZE;
   }
@@ -216,7 +229,7 @@ uvminit(pagetable_t pagetable, uchar *src, uint sz)
 }
 
 // Allocate PTEs and physical memory to grow process from oldsz to
-// newsz, which need not be page aligned.  Returns new size or 0 on error.
+// newsz, which need not be page aligned.  Returns new size or 0 on error. (notes: allocates physical memory with kalloc, and adds PTEs to the user pagetable with mappages.)
 uint64
 uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
 {
@@ -230,7 +243,7 @@ uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz)
   for(a = oldsz; a < newsz; a += PGSIZE){
     mem = kalloc();
     if(mem == 0){
-      uvmdealloc(pagetable, a, oldsz);
+      uvmdealloc(pagetable, a, oldsz);  // 分配失败为什么还要 dealloc? 看uvmdealloc代码，我觉得是不需要的。
       return 0;
     }
     memset(mem, 0, PGSIZE);
@@ -368,16 +381,21 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 // Copy from user to kernel.
 // Copy len bytes to dst from virtual address srcva in a given page table.
 // Return 0 on success, -1 on error.
+// 要 copy 的内容，可能横跨多页
 int
 copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 {
   uint64 n, va0, pa0;
 
   while(len > 0){
+    // srcva 所在的虚拟页起始地址为 va0，对应物理页的起始地址 pa0
+    // 所以 srcva 对应的物理地址为 pa0 + (srcva - va0)(srcva 在页内的偏移量)
+    // dst 是 kernel 里面（ 物理？）地址
     va0 = PGROUNDDOWN(srcva);
     pa0 = walkaddr(pagetable, va0);
     if(pa0 == 0)
       return -1;
+    // n 是要此次 copy 要负责的 block size
     n = PGSIZE - (srcva - va0);
     if(n > len)
       n = len;
@@ -385,6 +403,7 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 
     len -= n;
     dst += n;
+    // 将 srcva 移动至下一页的起始虚拟地址
     srcva = va0 + PGSIZE;
   }
   return 0;
